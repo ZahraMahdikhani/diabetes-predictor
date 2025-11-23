@@ -1,4 +1,5 @@
 import io
+import os
 import json
 import sqlite3
 from datetime import datetime
@@ -25,9 +26,8 @@ MODEL_PATH = "diabetes_model.pkl"
 THRESHOLD_PATH = "threshold.json"
 
 # ----- Load model + threshold -----
+THRESHOLD = float(os.environ.get("THRESHOLD", 0.502))
 model = joblib.load(MODEL_PATH)
-with open(THRESHOLD_PATH, "r") as f:
-    THRESHOLD = float(json.load(f)["threshold"])
 
 # features order must match training
 FEATURES = [
@@ -56,7 +56,7 @@ FEATURES = [
 
 # ----- App -----
 app = Flask(__name__)
-app.secret_key = "replace_this_with_a_secure_random_key"
+app.secret_key = os.environ.get("SECRET_KEY", "fallback_random_key")
 
 # ----- DB helpers -----
 def init_db():
@@ -259,5 +259,6 @@ def view_record(rec_id):
 
 # run
 if __name__ == "__main__":
-    # debug True for development; switch to False in production
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    port = int(os.environ.get("PORT", 5000))  # Render پورت را در ENV می‌دهد
+    app.run(host="0.0.0.0", port=port)
+
