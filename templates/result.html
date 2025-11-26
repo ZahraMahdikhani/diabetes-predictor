@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Diabetes Risk Report</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #f0ea5e9 0%, #10b981 100%); min-height: 100vh; }
+        .result-card { animation: slideUp 0.8s ease-out; }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+<div class="app-container">
+    <main class="main-content py-12 px-4">
+        <div class="container max-w-4xl mx-auto">
+
+            <div class="text-center mb-10 text-white">
+                <h1 class="header-title text-5xl md:text-6xl">Your Results</h1>
+                <p class="header-subtitle text-xl mt-4 opacity-95">Diabetes Risk Assessment • {{ date }}</p>
+            </div>
+
+            <div class="result-card bg-white rounded-3xl shadow-2xl overflow-hidden">
+                <div class="p-10 md:p-16 text-center">
+
+                    <!-- High Risk -->
+                    {% if prediction.result == 1 %}
+                        <div class="text-9xl mb-6">Warning</div>
+                        <h2 class="text-5xl font-black text-red-600 mb-6">HIGH RISK</h2>
+                        <p class="text-3xl font-bold text-gray-800 mb-8">
+                            Probability: <span class="text-red-600 text-5xl">{{ prediction.prob }}</span>
+                        </p>
+                        <div class="bg-red-50 border-2 border-red-200 rounded-2xl p-8 mb-10 max-w-3xl mx-auto">
+                            <p class="text-xl leading-relaxed text-gray-700">
+                                Based on your answers, you have a <strong>high risk</strong> of developing type 2 diabetes in the next 10 years.<br><br>
+                                <strong class="text-red-700">We strongly recommend</strong> seeing a doctor as soon as possible for blood tests and professional evaluation.
+                            </p>
+                        </div>
+
+                    <!-- Low Risk -->
+                    {% else %}
+                        <div class="text-9xl mb-6">Checkmark</div>
+                        <h2 class="text-5xl font-black text-emerald-600 mb-6">LOW RISK</h2>
+                        <p class="text-3xl font-bold text-gray-800 mb-8">
+                            Probability: <span class="text-emerald-600 text-5xl">{{ prediction.prob }}</span>
+                        </p>
+                        <div class="bg-emerald-50 border-2 border-emerald-200 rounded-2xl p-8 mb-10 max-w-3xl mx-auto">
+                            <p class="text-xl leading-relaxed text-gray-700">
+                                Great news! Your current health profile shows a <strong>low risk</strong> of developing diabetes.<br><br>
+                                Keep up the healthy habits to stay this excellent result!
+                            </p>
+                        </div>
+                    {% endif %}
+
+                    <!-- Action Buttons -->
+                    <div class="button-group flex flex-col sm:flex-row gap-6 justify-center mt-12">
+                        <a href="{{ url_for('download_pdf', rec_id=prediction.id) }}"
+                           class="btn btn-primary text-2xl py-5 px-12 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition">
+                           Download PDF Report
+                        </a>
+
+                        <a href="{{ url_for('index') }}"
+                           class="btn btn-secondary text-2xl py-5 px-12 shadow-lg hover:bg-gray-200 transition">
+                           Take Test Again
+                        </a>
+                    </div>
+
+                    <p class="text-center text-gray-500 mt-12 text-sm">
+                        This tool is for screening purposes only • Not a substitute for medical diagnosis
+                    </p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+</body>
+</html>

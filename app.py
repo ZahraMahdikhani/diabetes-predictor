@@ -181,9 +181,19 @@ def index():
 
         # save to DB and return
         record_id = save_record(data, prob, result)
-        prediction = {"prob": round(float(prob), 4), "result": result, "id": record_id}
+        prob_percent = f"{prob:.1%}"  # مثلاً 73.5%
+        return render_template(
+            "result.html",
+            prediction={
+                "result": result,
+                "prob": prob_percent,
+                "id": record_id,
+                "date": datetime.now().strftime("%B %d, %Y")
+            }
+        )
 
-    return render_template("index.html", prediction=prediction, threshold=THRESHOLD)
+    return render_template("index.html")
+    
 
 
 @app.route("/api/predict", methods=["POST"])
@@ -214,38 +224,117 @@ def download_pdf(rec_id):
     if not rec:
         return "Record not found", 404
 
-    # build PDF in-memory
+    
+    # --- PDF Generation (English + Professional) ---
     buffer = io.BytesIO()
     p = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
 
-    p.setFont("Helvetica-Bold", 16)
-    p.drawString(40, height - 50, "گزارش پیش‌بینی دیابت")
+    # Colors (RGB)
+    p.setFillColorRGB(0.1, 0.5, 0.7)  # Teal color for title
+
+    # Title
+    p.setFont("Helvetica-Bold", 24)
+    p.drawCentredString(width / 2, height - 80, "Diabetes Risk Assessment Report")
+
+    # Subtitle
+    p.setFillColorRGB(0.3, 0.3, 0.3)
+    p.setFont("Helvetica-Oblique", 12)
+    p
+    p.drawCentredString(width / 2, height - 110, "10-Year Type 2 Diabetes Risk Prediction")
+
+    # Line under header
+    p.setStrokeColorRGB(0.1, 0.7, 0.6)
+    p.setLineWidth(3)
+    p.line(50, height - 130, width - 50, height - 130)
+
+    # Reset color
+    p.setFillColorRGB(0, 0, 0)
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(50, height - 160, "Report Details")
+
     p.setFont("Helvetica", 12)
-    p.drawString(40, height - 80, f"شناسه گزارش: {rec['id']}")
-    p.drawString(40, height - 100, f"زمان (UTC): {rec['created_at']}")
-    p.drawString(40, height - 120, f"احتمال دیابت (model prob): {rec['prob']:.4f}")
-    p.drawString(40, height - 140, f"نتیجه با threshold={THRESHOLD}: {'مثبت' if rec['result']==1 else 'منفی'}")
-    p.drawString(40, height - 170, "ورودی‌ها:")
+    p.drawString(50, height - 190, f"Report ID:           {rec['id']}")
+    p.drawString(50, height - 210, f"Generated on:       {datetime.fromisoformat(rec['created_at']).strftime('%B %d, %Y at %H:%M UTC')}")
+    p.drawString(50, height - 230, f"Risk Probability:   {rec['prob']:.1%}")
+    p.drawString(50, height - 250, f"Final Result:       {'HIGH RISK' if rec['result']==1 else 'LOW RISK'}")
 
-    y = height - 190
-    for k, v in rec["input"].items():
-        p.drawString(60, y, f"{k}: {v}")
-        y -= 16
-        if y < 50:
-            p.showPage()
-            y = height - 50
+    # Risk level box
+    if rec['result'] == 1:
+        p.setFillColorRGB(0.95, 0.3, 0.3)
+        p.setStrokeColorRGB(0.8, 0, 0)
+    else:
+        p.setFillColorRGB(0.3, 0.8, 0.5)
+        p.setStrokeColorRGB(0, 0.5, 0.2)
+    p.rect(380, height - 260, 160, 50, fill=1)
+    p.setFillColorRGB(1, 1, 1)
+    p.setFont("Helvetica-Bold", 18)
+    p.drawCentredString(460, height - 235, "HIGH RISK" if rec['result']==1 else "LOW RISK")
 
-    p.showPage()
+    # Inputs table
+    p.setFillColorRGB(0, 0, 0)
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(50, height - 310, "Your Answers")
+
+    p.setFont("Helvetica", 11)
+    y = height - 340
+    for i, (key, value) in enumerate(rec["input"].items()):
+        if i % 2 == 0:
+            p.setFillColorRGB(0.95, 0.95, 0.95)
+            p.rect(50, y - 8, width - 100, 20, fill=1)
+        p.setFillColorRGB(0, 0, 0)
+    # Translate feature names to readable English
+    readable = {
+        "HighBP": "High Blood Pressure",
+        "HighChol": "High Cholesterol",
+        "CholCheck": "Cholesterol Check (5y)",
+        "BMI": "Body Mass Index (BMI)",
+        "Smoker": "Current Smoker",
+        "Stroke": "History of Stroke",
+        "HeartDiseaseorAttack": "Heart Disease or Attack",
+        "PhysActivity": "Physical Activity",
+        "Fruits": "Eat Fruit Daily",
+        "Veggies": "Eat Vegetables Daily",
+        "HvyAlcoholConsump": "Heavy Alcohol Use",
+        "AnyHealthcare": "Have Health Insurance",
+        "NoDocbcCost": "Couldn’t See Doctor Due to Cost",
+        "GenHlth": "General Health (1=Excellent, 5=Poor)",
+        "MentHlth": "Poor Mental Health Days (past 30)",
+        "PhysHlth": "Poor Physical Health Days (past 30)",
+        "DiffWalk": "Difficulty Walking",
+        "Gender": "Gender (0=Female, 1=Male)",
+        "Age": "Age Group",
+        "Education": "Education Level",
+        "Income": "Annual Household Income"
+    }
+    label = readable.get(key, key)
+    p.drawString(60, y, f"• {label}")
+    p.drawString(380, y, str(value))
+    y -= 25
+    if y < 80:
+        p.showPage()
+        y = height - 50
+
+    # Footer
+    p.setFont("Helvetica-Oblique", 9)
+    p.setFillColorRGB(0.4, 0.4, 0.4)
+    p.drawCentredString(width / 2, 30, "This is a screening tool • Not a medical diagnosis • Consult a healthcare provider")
+
     p.save()
     buffer.seek(0)
-
     return send_file(
         buffer,
         as_attachment=True,
-        download_name=f"diabetes_report_{rec_id}.pdf",
-        mimetype="application/pdf",
+        download_name=f"Diabetes_Risk_Report_{rec['id']}_{datetime.now().strftime('%Y%m%d')}.pdf",
+        mimetype="application/pdf"
     )
+
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name=f"Diabetes_Risk_Report_{rec_id}_{datetime.now().strftime('%Y%m%d')}.pdf",
+            mimetype="application/pdf",
+        )
 
 
 # optional: simple page to view a record (could be extended)

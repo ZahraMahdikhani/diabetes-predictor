@@ -75,7 +75,7 @@ nextBtn.addEventListener("click", () => {
     showSection(currentSection)
     updateButtons()
   } else {
-    alert("لطفا تمام فیلد‌های این بخش را پر کنید")
+    alert("Please fill in all fields in this section before proceeding.")
   }
 })
 
@@ -93,7 +93,7 @@ prevBtn.addEventListener("click", () => {
 form.addEventListener("submit", (e) => {
   if (!validateSection()) {
     e.preventDefault()
-    alert("لطفا تمام فیلد‌های این بخش را پر کنید")
+    alert("Please fill in all fields before submitting.")
   }
 })
 
