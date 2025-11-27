@@ -80,19 +80,41 @@ def get_record(rec_id):
 
 init_db()
 
-# ----- Validation -----
+# ----- Validation + BMI calculation -----
 def parse_and_validate(form_or_json, source="form"):
     data = {}
     errors = []
+
+    #  Height and Weight 
+    try:
+        height_cm = float(form_or_json.get("Height", 0))
+        weight_kg = float(form_or_json.get("Weight", 0))
+        if not (50 <= height_cm <= 250):
+            errors.append("Height out of range (50-250 cm)")
+        if not (20 <= weight_kg <= 300):
+            errors.append("Weight out of range (20-300 kg)")
+    except:
+        errors.append("Invalid Height or Weight")
+    
+    # محاسبه BMI
+    if not errors:
+        height_m = height_cm / 100
+        bmi = weight_kg / (height_m ** 2)
+        bmi = round(bmi, 1)  
+        data["BMI"] = bmi
+        data["Height"] = height_cm
+        data["Weight"] = weight_kg
+
+    # دریافت بقیه ویژگی‌ها
     for feature in FEATURES:
+        if feature in ["BMI", "Height", "Weight"]:
+            continue  
         raw = form_or_json.get(feature)
         if raw is None:
             errors.append(f"Missing field: {feature}")
             continue
         try:
-            if feature == "BMI":
-                val = float(raw)
-            elif feature in ["MentHlth", "PhysHlth"]:
+            if feature in ["MentHlth", "PhysHlth"]:
                 val = int(raw)
             else:
                 val = int(raw) if raw else 0
@@ -213,7 +235,7 @@ def download_pdf(rec_id):
         "GenHlth": "General Health (1=Excellent, 5=Poor)", "MentHlth": "Poor Mental Health Days (past 30)",
         "PhysHlth": "Poor Physical Health Days (past 30)", "DiffWalk": "Difficulty Walking",
         "Gender": "Gender (0=Female, 1=Male)", "Age": "Age Group", "Education": "Education Level",
-        "Income": "Annual Household Income"
+        "Income": "Annual Household Income", "Height": "Height (cm)", "Weight": "Weight (kg)"
     }
 
     for i, (key, value) in enumerate(rec["input"].items()):
